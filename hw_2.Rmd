@@ -1,0 +1,76 @@
+---
+title: "hw_2"
+author: "Ilya Ershov"
+date: "26 02 2018"
+output: html_document
+---
+
+### 1.1
+```{r}
+library(tidyverse)
+df <- read.csv("https://raw.githubusercontent.com/agricolamz/2018_data_analysis_for_linguists/master/data/students/levantic/hw2_binomial/hw2_binomial.csv", encoding = 'UTF-8')
+df <- as_tibble(df)
+kk = df$k[1]
+nn = df$n[1]
+pp = df$prior[1]
+binomial_test <- binom.test(x = kk, n = nn, p = pp)
+binomial_test
+```
+### 1.2
+```{r}
+library(mosaic)
+set.seed(42)
+do(1000)*
+  sum(sample(x = 1:0, 
+             size = nn, 
+             prob = c(pp, 1-pp), 
+             replace = TRUE)) -> 
+  simulations
+simulations %>% 
+  mutate(greater = sum >= kk) %>% 
+  count(greater)
+simulations %>% 
+  ggplot(aes(sum))+
+  geom_density(fill = "lightblue")+
+  geom_vline(xintercept = kk, linetype = 2)+
+  theme_bw()+
+  labs(title = "Распределение 1000 симуляций с параметрами n = 110, p = 0.38")
+```
+### 1.3
+```{r}
+alpha_prior <- pp*nn
+beta_prior <- (1-pp)*nn
+alpha_data <- kk 
+beta_data <- nn - kk
+alpha_post <- alpha_prior + alpha_data
+beta_post <- beta_prior + beta_data
+mean = alpha_post/(alpha_post+beta_post)
+mean
+x <- seq(0, 1, length = 100)
+data_frame(p = rep(x, 3),
+           density = c(dbeta(x, alpha_prior, beta_prior),
+                       dbeta(x, alpha_data, beta_data),
+                       dbeta(x, alpha_post, beta_post)),
+           type = rep(c("prior", "likelihood", "posterior"), each = 100))%>% 
+  ggplot(aes(x = p, y = density, color = type))+
+  geom_line()+
+  theme_bw()
+```
+### 1.4
+```{r}
+x <- seq(0, 1, length = 100)
+data_frame(p = rep(x, 3),
+           density = c(dbeta(x, 1, 1),
+                       dbeta(x, alpha_data, beta_data),
+                       dbeta(x, alpha_data + 1, beta_data + 1)),
+           type = rep(c("prior", "likelihood", "posterior"), each = 100))%>% 
+  ggplot(aes(x = p, y = density, color = type))+
+  geom_line()+
+  theme_bw()
+alpha_post_2 <- 1 + alpha_data
+beta_post_2 <- 1 + beta_data
+mean_2 <- alpha_post_2/(alpha_post_2+beta_post_2)
+mean_2
+```
+### 1.5
+При вероятности успеха по биноминальному тесту, равной 0.345 (p-value = 0.56, 95%-ый доверительный интервал равен 0.2573576; 0.4421038) можно утвержать, что наши ожидания оправдались (нельзя отвергнуть данную нулевую гипотезу). Однако, при симуляции данных с вероятностью 0.38, результат мало отличается от максимальной вероятности. При информативном и неинформаивном априорном распределении средние вероятности равны 0.36 и 0.35 соответственно.
