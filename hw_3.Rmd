@@ -1,0 +1,91 @@
+---
+title: "hw_3"
+author: "Ilya Ershov"
+date: "06 03 2018"
+output: html_document
+---
+
+### 1.1
+```{r}
+library(tidyverse)
+library(bootstrap)
+library(mosaic)
+df <- read.csv('https://raw.githubusercontent.com/agricolamz/2018_data_analysis_for_linguists/master/data/students/levantic/hw3_binomial_ci/hw3_wodehouse.csv', encoding = 'UTF-8')
+df %>% 
+  filter(word == "сэр") %>% 
+  count(chapter) -> av
+df %>%
+  group_by(chapter) %>% 
+  count(chapter) -> all
+av['all'] <- all$n
+av %>%
+  mutate(average = n/all) %>% 
+  arrange(desc(average)) %>% 
+  summarise(g_mean = mean(average)) -> grand_mean
+av <- transform(av, average = n/all)
+as_tibble(av)
+as_tibble(grand_mean)
+```
+### 1.2
+```{r}
+set.seed(42)
+wodehouse_bs <- bootstrap(av$average, nboot = 10000, theta = mean)$thetastar
+wodehouse_bs <- data_frame(means = wodehouse_bs)
+wodehouse_bs %>%
+  summarise(mean = mean(means),
+            q1 = quantile(means, 0.025),
+            q2 = quantile(means, 0.975)) ->
+  wodehouse_stats
+wodehouse_stats <- transform(wodehouse_stats, length = q2 - q1)
+as_tibble(wodehouse_stats)
+```
+### 1.3
+```{r}
+av %>% 
+  group_by(chapter) %>%
+  mutate(low_ci = binom.test(x = n, n = all, ci.method = "Clopper-Pearson")$conf.int[1],
+         up_ci = binom.test(x = n, n = all, ci.method = "Clopper-Pearson")$conf.int[2]) -> bin
+
+bin <- transform(bin, length = up_ci - low_ci)
+bin_max <- as_tibble(bin[which.max(bin$length),-8])
+bin_max <- select(bin_max, chapter, length)
+as_tibble(bin_max)
+```
+### 1.4
+```{r}
+mu <- mean(av$average)
+var <- var(av$average)
+alpha0 <- ((1 - mu) / var - 1 / mu) * mu ^ 2
+beta0 <- alpha0 * (1 / mu - 1)
+x <- seq(0, 0.1, length = 1000)
+estimation <- data_frame(
+  x = x,
+  density = c(dbeta(x, shape1 = alpha0, shape2 = beta0)))
+
+av %>% 
+  mutate(alpha_post = n+alpha0,
+         beta_post = all-n+beta0,
+         average_post = alpha_post/(alpha_post+beta_post),
+         cred_int_l = qbeta(.025, alpha_post, beta_post),
+         cred_int_h = qbeta(.975, alpha_post, beta_post),
+         length = cred_int_h - cred_int_l) -> posterior
+posterior
+
+fr_max <- as_tibble(posterior[which.max(posterior$length),-12])
+fr_max <- select(fr_max, chapter, length)
+as_tibble(fr_max)
+```
+### 1.5
+```{r}
+bin_min <- as_tibble(bin[which.min(bin$length),-8])
+bin_min <- select(bin_min, chapter, length)
+as_tibble(bin_min)
+```
+### 1.6
+```{r}
+fr_min <- as_tibble(posterior[which.min(posterior$length),-12])
+fr_min <- select(fr_min, chapter, length)
+as_tibble(fr_min)
+```
+### 1.7
+В романе «Фамильная честь Вустеров» П. Г. Вудхауза количество вхождений слова "сэр"варьируется от главы к главе: так, наибольшее количество вхождений встречается в 11-ой главе и равняется 49 словам (среднее 0,012), а наименьшее - в 6 главе, там всего 1 вхождение (среднее - 0,0005). Среднее значением одинаково, как по выборке, так и с помощью bootstrap - 0,0056. Это говорит о том, что выборка сбалансирована. Фриквентистсткие и байесовские оценки показали практически одинаковые результаты.
