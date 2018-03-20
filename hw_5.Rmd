@@ -1,0 +1,54 @@
+---
+title: "hw5"
+author: "Ilya Ershov"
+date: "20 03 2018"
+output: html_document
+---
+
+### 1.1
+```{r}
+library(tidyverse)
+library(GGally)
+library(ca)
+library(tidyverse)
+library(dplyr)
+
+chairs <- read.csv("https://raw.githubusercontent.com/agricolamz/2018_data_analysis_for_linguists/master/data/students/levantic/hw5_CA_MCA/hw5_chairs.csv")
+MCA <- MASS::mca(chairs[, -c(1:3)])
+MCA
+
+chairs <- cbind(chairs, MCA$rs)
+variables <- as_data_frame(MCA$cs)
+variables$var_names <- rownames(MCA$cs)
+chairs %>% 
+  ggplot(aes(`1`, `2`))+
+  geom_point(aes(color = Category))+
+  stat_ellipse(aes(color = Category))+
+  geom_text(data = variables, aes(`1`, `2`, label = var_names), size=2.5)+
+  theme_bw()+
+  scale_x_continuous(limits = c(-0.02, 0.02))
+```
+### 1.2
+Из графика видно, что в немецком Stuhl и Sessel различаются, но не во всём. Есть свойства, которые проявляются и у Stuhl, и у Sessel. Однако, свойств, которые различают Stuhl и Sessel, больше, например, Arm.No, Function.Outdoor, Recline.No выделяют Stuhl; к Arm.Yes - Sessel. Такое описание приближено к реальности (например, стул не имеет подлокотников, чаще (чем кресло) приспособлен для использования на свежем воздухе).
+### 2.1
+```{r}
+colreg <- read.csv("https://raw.githubusercontent.com/agricolamz/2018_data_analysis_for_linguists/master/data/students/levantic/hw5_CA_MCA/hw5_colreg.csv")
+
+ca <- ca(colreg[-5])
+ca
+colreg_col <- data.frame(ca$colcoord)
+colreg_col$rows <- rownames(ca$colcoord)
+
+colreg_row <- data.frame(ca$rowcoord)
+colreg_row$rows <- colreg$colors
+
+colreg_col %>% 
+  ggplot(aes(Dim1, Dim2, label = rows))+
+  geom_text(color = "blue")+
+  geom_text(data = colreg_row, color = "red")+
+  theme_bw()+
+  labs(x = "Dim1",
+       y = "Dim2")
+```
+### 2.2
+В академических текстах практически не употребляются цвета (academic далеко от точек, отвечающих за цвета). В разговорном стиле встречаются "белый", "черный" - базовые цвета. Более сложные цвета (небазовые) свойствены художественным текстам, прессе и фантастике, причем в больше степени фантастике, так как это более художественный стиль.
